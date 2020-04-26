@@ -6,8 +6,8 @@ const main = async ({ query }) => {
     console.log()
 
     const results = await Promise.all([
-        // testFuturama({ query }),
-        // testSimpsons({ query }),
+        testFuturama({ query }),
+        testSimpsons({ query }),
         testFamilyGuy({ query }),
     ]);
 
@@ -42,5 +42,4 @@ if (!query) {
     process.exit(1)
 }
 
-console.log(`Your query is: ${query}`)
 main({ query })
