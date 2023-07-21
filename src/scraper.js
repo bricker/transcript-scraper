@@ -1,9 +1,10 @@
-const Promise = require('bluebird')
 const cheerio = require('cheerio')
 const superagent = require('superagent')
 
-const getStatelessMatcher = (query) => {
-    return new RegExp(query, 'gi')
+const getStatelessMatcher = ({ query, caseSensitive }) => {
+    const ciflag = caseSensitive ? '' : 'i'
+    const flags = `g${ciflag}`
+    return new RegExp(query, flags)
 }
 
 const getTranscriptUrls = async ({
@@ -41,12 +42,19 @@ const defaultProcessor = (text) => {
     return text.replace(/\s+/g, ' ').replace(/\[.+?\]/g, '')
 }
 
-const getMatches = async ({ transcriptUrls, query, ...rest}) => {
-    const statelessSearchMatcher = getStatelessMatcher(query)
+const getMatches = async ({ transcriptUrls, ...args}) => {
+    const statelessSearchMatcher = getStatelessMatcher(args)
+    const results = [];
 
-    const results = await Promise.map(transcriptUrls, (transcriptUrl) => {
-        return findTextInTranscript({ transcriptUrl, statelessSearchMatcher, ...rest })
-    }, { concurrency: 5 })
+    const urls = [...transcriptUrls]
+
+    while (urls.length > 0) {
+        const r = await Promise.all(urls.splice(0, 5).map((transcriptUrl) => {
+            return findTextInTranscript({ transcriptUrl, statelessSearchMatcher, ...args })
+        }))
+
+        results.push(...r)
+    }
 
     return results.flat()
 }
@@ -69,7 +77,8 @@ const findTextInTranscript = async ({
         return output;
     }
 
-    const contents = documentProcessor(cheerio.load(text).text())
+    const $ = cheerio.load(text)
+    const contents = documentProcessor($.text())
 
     const statefulMatcher = new RegExp(statelessSearchMatcher)
     let currentMatch
@@ -79,7 +88,8 @@ const findTextInTranscript = async ({
         if (currentMatch) {
             const idx = currentMatch.index
             const context = contents.substring(idx - contextLength, idx + contextLength)
-            output.push({ transcriptUrl, context })
+            const episodeTitle = $($('.topic-title a')[0]).text().trim()
+            output.push({ episodeTitle, transcriptUrl, context })
         }
     } while (currentMatch !== null);
 

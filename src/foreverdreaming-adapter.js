@@ -6,7 +6,7 @@ const transcriptLinkTextMatcher = /^\d\dx\d\d/
 
 const cleanPaths = path => `${rootUrl}${path.replace(/^\./, '')}`
 
-const runForeverDreaming = async ({ forumId, query }) => {
+const runForeverDreaming = async ({ forumId, ...args }) => {
     let results = []
     let pageLength = 0
     let start = 0
@@ -23,7 +23,7 @@ const runForeverDreaming = async ({ forumId, query }) => {
         const transcriptUrls =  transcriptPaths.map(cleanPaths)
         const pageMatches = await scraper.getMatches({
             transcriptUrls,
-            query,
+            ...args,
         })
 
         results = results.concat(pageMatches)
